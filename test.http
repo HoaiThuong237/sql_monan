@@ -1,7 +1,0 @@
-POST http://localhost:5000/login
-Content-Type: application/json
-
-{
-  "email": "admin1",
-  "password": "12345"
-}
