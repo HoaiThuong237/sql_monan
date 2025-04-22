@@ -19,7 +19,7 @@ const config = {
   password: process.env.DB_PASS,
   server: process.env.DB_SERVER,
   database: process.env.DB_NAME,
-  options: { encrypt: true, trustServerCertificate: false },
+  options: { encrypt: false, trustServerCertificate: true },
 };
 
 // Kết nối SQL Server
@@ -219,10 +219,42 @@ app.get("/recipes/:id/comments", async (req, res) => {
 });
 
 
+app.post("/forgot-password", async (req, res) => {
+  const { login, newPassword } = req.body;
+
+  if (!login || !newPassword) {
+    return res.status(400).json({ error: "Thiếu thông tin." });
+  }
+
+  try {
+    const result = await pool
+      .request()
+      .input("login", sql.NVarChar, login)
+      .query("SELECT * FROM Users WHERE Email = @login OR Username = @login");
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy người dùng." });
+    }
+
+    const hashed = await bcryptjs.hash(newPassword, 10);
+
+    await pool
+      .request()
+      .input("password", sql.NVarChar, hashed)
+      .input("login", sql.NVarChar, login)
+      .query("UPDATE Users SET Password = @password WHERE Email = @login OR Username = @login");
+
+    res.json({ message: "Đổi mật khẩu thành công!" });
+  } catch (err) {
+    console.error("❌ Lỗi reset password:", err);
+    res.status(500).json({ error: "Lỗi server", details: err.message });
+  }
+});
+
 
 
 // 📌 Chạy server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại ${PORT}`);
+  console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
 });
